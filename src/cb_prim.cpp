@@ -1,4 +1,5 @@
 #define INT_MIN -2147483648
+// #define DEBUG
 
 #include <iostream>
 #include <fstream>
@@ -85,11 +86,21 @@ int main (int argc, char* argv []) {
 		buildAdjlist(input, adjList, V, E, directed);
 		allPathSetTrue(adjList);
 		int iteration = 0;
+
 		while(cycleFound) {
 			iteration++;
+			
+			#ifdef DEBUG
 			cout << "Iteration: " << iteration << "\n" << endl;
+			#endif
+
 			dfs(adjList, vertices, V);
+			
+			#ifdef DEBUG
+			cout << "Cycle Found: " << cycleFound << endl;
+			#endif
 		}
+
 		buildDirectedMaxST(adjList, vertices, MaxST, V);
 		notInMaxSTDirected(adjList, MaxST, output);
 	}
@@ -193,7 +204,7 @@ void notInMaxST(vector<vector<Edge>>& adjList, vector<Edge>& MaxST, ofstream& ou
 				adjList[i][j].inTree = true;	// Use .inTree to mark the edge already checked
 				adjList[adjList[i][j].v][searchParentIndex(adjList, adjList[i][j].v, i)].inTree = true;	// Use .inTree to avoid duplicate edges
 				edgeRemoved = true;
-				unseleceted << adjList[i][j].u << " " << adjList[i][j].v << " " << adjList[i][j].w << endl;
+				unseleceted << adjList[i][j].u << " " << adjList[i][j].v << " " << adjList[i][j].w << "\n";
 				removedWeight += adjList[i][j].w;
 			}
 		}
@@ -251,32 +262,52 @@ void dfsInit(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int V) {
 }
 
 void dfsVisit(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int u) {
+	cycleFound = false;
 	vertices[u].color = GRAY;
 	for (int i = 0; i < adjList[u].size(); i++) {
+		
+		#ifdef DEBUG
 		cout << "u = " << u << endl;
 		cout << "u color: " << vertices[adjList[u][i].u].color << endl;
 		cout << "v = " << adjList[u][i].v << endl;
 		cout << "v color: " << vertices[adjList[u][i].v].color << endl;
+		cout << "adjList[u][i].inTree: " << (adjList[u][i].inTree ? "True" : "False") << endl;
 		cout << endl;
+		#endif
+
 		if (vertices[adjList[u][i].v].color == WHITE && adjList[u][i].inTree) {
 			cycleFound = false;
 			vertices[adjList[u][i].v].p = u;
 			adjList[u][i].inTree = true;
 			if(!cycleFound && vertices[adjList[u][i].v].color != BLACK) {
-				cout << "Row 237: " << endl;
+				
+				#ifdef DEBUG
+				cout << "Row 271: " << endl;
+				#endif
+
 				dfsVisit(adjList, vertices, adjList[u][i].v);
 			} else {
 				return;
 			}
 		} else if (vertices[adjList[u][i].v].color == GRAY && adjList[u][i].inTree) {
 			adjList[u][i].inTree = true;
+			vertices[adjList[u][i].v].p = u;
+			
+			#ifdef DEBUG
+			cout << "vertices[adjList[u][i].v].p: " << vertices[adjList[u][i].v].p << endl;
 			cout << "---------------- Cycle Break ----------------" << endl;
 			cout << "cycle head: " << adjList[u][i].v << " cycle tail: " << u << endl;
+			#endif
+
 			cycleFound = true;
 			breakMinEdge(adjList, vertices, adjList[u][i].v, u);		// breakMinEdge (adjList, cycle head, cycle tail)
 			return;
 		} else {
+			
+			#ifdef DEBUG
 			cout << "\nPair skipped\n" << endl;
+			#endif
+
 			continue;
 		}
 
@@ -285,9 +316,13 @@ void dfsVisit(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int u) {
 		}
 	}
 	vertices[u].color = BLACK;
+
+	#ifdef DEBUG
 	cout << endl;
 	cout << "u = " << u << " color: " << vertices[u].color << endl;
 	cout << "\n\n" << endl;
+	#endif
+
 	cycleFound = false;
 	return;
 }
@@ -321,27 +356,52 @@ void dfsVisit(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int u, ve
 
 void dfs(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int V) {
 	dfsInit(adjList, vertices, V);
+	srand(time(NULL));
 	int root = rand() % V;
+	
+	#ifdef DEBUG
 	cout << "Root: " << root << endl;
-	cout << "Row 301: " << endl;
+	cout << "Row 330: " << endl;
+	#endif
+
 	if(vertices[root].color != BLACK)	dfsVisit(adjList, vertices, root/*, time*/);
-	if(!cycleFound) {
+	if(cycleFound) {
+		return;
+	} else {
 		for (int i = 0; i < V; i++) {
 			if (vertices[i].color == WHITE) {
+
+				#ifdef DEBUG
 				cout << "DFS Visit: " << i << endl;
-				cout << "Row 307: " << endl;
+				cout << "Row 337: " << endl;
+				#endif
+
 				dfsVisit(adjList, vertices, i);
+				
+				#ifdef DEBUG
+				cout << "Cycle Found @ Row 337: " << cycleFound << endl;
+				#endif
+
 				if(cycleFound) {
 					return;
 				}
 			}
 		}
 	}
+
+	#ifdef DEBUG
+	cout << "Row 348" << endl;
+	#endif
+
 	cycleFound = false;
 }
 
-void dfs(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int V, vector<Edge>& MaxST){
-	cout << "me" << endl;
+void dfs(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int V, vector<Edge>& MaxST){		// This is for build directed MaxST
+	
+	#ifdef DEBUG
+	cout << "Row 400" << endl;
+	#endif
+
 	dfsInit(adjList, vertices, V);
 	for (int i = 0; i < V; i++) {
 		if (vertices[i].color == WHITE) {
@@ -357,11 +417,32 @@ void breakMinEdge(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int c
 	int v = searchParentIndex(adjList, cycleTail, cycleHead);
 	int minWeight = adjList[u][v].w;
 	Edge minEdge = adjList[u][v];
+	
+	// cout << "vertices[cycleTail].p: " << vertices[cycleTail].p << endl;
+
+	// if(vertices[cycleHead].p == cycleTail) {
+	// 	cout << "SPECIAL CASE" << endl;
+	// 	if(adjList[cycleHead][searchParentIndex(adjList, cycleHead, cycleTail)].w < minWeight) {
+	// 		minWeight = adjList[cycleHead][searchParentIndex(adjList, cycleHead, cycleTail)].w;
+	// 		minEdge = adjList[cycleHead][searchParentIndex(adjList, cycleHead, cycleTail)];
+	// 	}
+	// 	adjList[cycleTail][searchParentIndex(adjList, cycleTail, cycleHead)].inTree = false;
+	// 	cout << "removed Edge: " << cycleTail << " " << cycleHead << " " << adjList[cycleTail][searchParentIndex(adjList, cycleTail, cycleHead)].w << endl;
+	// 	cout << "--------------------------------------------------\n" << endl;
+	// 	return;
+	// }
+	
+	
+	
 	do {
+
+		#ifdef DEBUG
 		cout << "u = " << u << endl;
 		cout << "u color: " << vertices[adjList[u][v].u].color << endl;
 		cout << "v = " << adjList[u][v].v << endl;
 		cout << "v color: " << vertices[adjList[u][v].v].color << endl;
+		#endif
+
 		int temp;
 		temp = u;
 		u = vertices[adjList[u][v].u].p;
@@ -372,15 +453,17 @@ void breakMinEdge(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int c
 		}
 	} while(adjList[u][v].u != cycleHead);
 	
+	#ifdef DEBUG
 	cout << "\nadjList[u][v].u: " << adjList[u][v].u << " cycleHead: " << cycleHead << endl;
 	cout << "minWeight: " << minWeight << endl;
+	#endif
 	
 	adjList[minEdge.u][searchParentIndex(adjList, minEdge.u, minEdge.v)].inTree = false;
+
+	#ifdef DEBUG
 	cout << "removed Edge: " << minEdge.u << " " << minEdge.v << " " << minEdge.w << endl;
 	cout << "--------------------------------------------------\n" << endl;
-	// dfsVisit(adjList, vertices, minEdge.u);
-	
-
+	#endif
 }
 
 void buildDirectedMaxST(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, vector<Edge>& MaxST, int V) {

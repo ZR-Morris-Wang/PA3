@@ -2,7 +2,7 @@ SRC_DIR = ./src
 BIN_DIR = ./bin
 TARGET = $(BIN_DIR)/cb
 CXX = g++
-CXXFLAGS = -Wall -O2
+CXXFLAGS = -Wall -O3
 
 SRC_FILES = $(wildcard $(SRC_DIR)/cb_prim.cpp)
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=%.o)
