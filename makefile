@@ -4,7 +4,7 @@ TARGET = $(BIN_DIR)/cb
 CXX = g++
 CXXFLAGS = -Wall -O2
 
-SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
+SRC_FILES = $(wildcard $(SRC_DIR)/cb_prim.cpp)
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=%.o)
 
 $(TARGET): $(OBJ_FILES)
