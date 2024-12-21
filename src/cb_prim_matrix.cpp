@@ -1,5 +1,6 @@
 #define INT_MIN -2147483648
 // #define DEBUG
+// #define DEBUG2
 
 #include <iostream>
 #include <fstream>
@@ -27,10 +28,18 @@ struct compareVertex {
 	}
 };
 
+struct edgeCopy;
+
 struct Edge {
     int u, v, w;
 	bool inTree;
+
+	// AI gen begin
+	struct edgeCopy toEdgeCopy() const;
+	// AI gen end
 };
+
+
 
 struct DisjointSet {
 	int p;
@@ -44,7 +53,7 @@ void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex
 void printMaxST(vector<Edge>& MaxST);
 // int searchParentIndex(const vector<vector<Edge>>& adjMatrix, int u, int parent);
 void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V);
-void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V);
+void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, vector<Vertex>& vertices, int V);
 void breakMinEdge(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int cycleHead, int cycleTail);
 void dfsInit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V);
 void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, int V);
@@ -53,7 +62,7 @@ void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V);
 void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V, vector<Edge>& MaxST);
 void buildDirectedMaxST(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, vector<Edge>& MaxST, int V);
 void allPathSetTrue(vector<vector<Edge>>& adjMatrix, int V);
-
+void removeRedundantEdge(vector<vector<Edge>>& adjMatrix, int V);
 
 int main (int argc, char* argv []) {
 	char temp = ' ';
@@ -105,7 +114,8 @@ int main (int argc, char* argv []) {
 		}
 
 		buildDirectedMaxST(adjMatrix, vertices, MaxST, V);
-		notInMaxSTDirected(adjMatrix, MaxST, output, V);
+		// removeRedundantEdge(adjMatrix, V);
+		notInMaxSTDirected(adjMatrix, MaxST, output, vertices, V);
 	}
 
 	input.close();
@@ -121,6 +131,12 @@ int main (int argc, char* argv []) {
 
 
 void buildAdjMatrix(ifstream& input, vector<vector<Edge>>& adjMatrix, int V, int E, bool directed) {
+	for(int i = 0; i < V; i++) {
+		for(int j = 0; j < V; j++) {
+			adjMatrix[i][j] = {-1, -1, -101, false};
+		}
+	}
+	
 	for (int i = 0; i < E; ++i) {
 		int u, v, w;
 		input >> u >> v >> w;
@@ -135,7 +151,7 @@ void buildAdjMatrix(ifstream& input, vector<vector<Edge>>& adjMatrix, int V, int
 		}
 	}
 
-	#ifdef DEBUG
+	#ifdef DEBUG2
 	cout << "Adjacency Matrix built" << endl;
 	#endif
 }
@@ -184,6 +200,296 @@ void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex
 }
 
 
+struct edgeCopy : Edge {
+	bool Copied = false;
+	Edge toEdge();
+};
+
+
+// AI gen begin
+edgeCopy Edge::toEdgeCopy() const {
+    edgeCopy copy;
+    copy.u = u;
+    copy.v = v;
+    copy.w = w;
+    copy.inTree = inTree;
+    copy.Copied = false; // Default value
+    return copy;
+}
+
+
+Edge edgeCopy::toEdge() {
+	Edge copy;
+	copy.u = u;
+	copy.v = v;
+	copy.w = w;
+	copy.inTree = inTree;
+	return copy;
+}
+
+// AI gen end
+void removeRedundantEdge(vector<vector<Edge>>& adjMatrix, int V) {
+	int E = 0;
+
+	#ifdef DEBUG2
+	printAdjMatrix(adjMatrix, V);
+	cout << endl;
+	#endif
+	
+	
+	vector<vector<edgeCopy>> adjMatrixCopy(V, vector<edgeCopy>(V));
+	
+	for (int i = 0; i < V; ++i) {
+		for (int j = 0; j < V; ++j) {
+			if(adjMatrix[i][j].w != -101 && adjMatrix[i][j].inTree) {
+			// cout << adjMatrix[i][j].u << " " << adjMatrix[i][j].v << " " << adjMatrix[i][j].w << " " << adjMatrix[i][j].inTree << endl;
+				adjMatrixCopy[i][j].u = adjMatrix[i][j].u;
+				adjMatrixCopy[i][j].v = adjMatrix[i][j].v;
+				adjMatrixCopy[i][j].w = adjMatrix[i][j].w;
+				adjMatrixCopy[i][j].inTree = adjMatrix[i][j].inTree;
+				adjMatrixCopy[i][j].Copied = false;
+			} else {
+				adjMatrixCopy[i][j].u = -1;
+				adjMatrixCopy[i][j].v = -1;
+				adjMatrixCopy[i][j].w = -101;
+				adjMatrixCopy[i][j].inTree = false;
+				adjMatrixCopy[i][j].Copied = false;			
+			}
+		}
+	}
+
+	// cout << "After first print" <<endl;
+
+	for(int i = 0; i < V; i++) {
+		for(int j = 0; j < V; j++) {
+			if(adjMatrix[i][j].inTree == true && !adjMatrixCopy[i][j].Copied) {
+				adjMatrixCopy[j][i].u = adjMatrix[i][j].v;
+				adjMatrixCopy[j][i].v = adjMatrix[i][j].u;
+				adjMatrixCopy[j][i].w = adjMatrix[i][j].w;
+				adjMatrixCopy[j][i].inTree = true;
+				adjMatrixCopy[j][i].Copied = true;
+			}
+		}
+	}
+
+	// cout << "After first copy" << endl;
+// AI gen begin
+	#ifdef DEBUG2
+	cout << "\n";
+	for (int i = 0; i < V; ++i) {
+		cout << i << ": ";
+		for (int j = 0; j < V; ++j) {
+			if (adjMatrixCopy[i][j].w != -101) {
+				cout << "(" << adjMatrixCopy[i][j].u << ", " << adjMatrixCopy[i][j].v << ", " << adjMatrixCopy[i][j].w << ", " << adjMatrixCopy[i][j].inTree << ") ";
+			}
+		}
+		cout << endl;
+	}
+	#endif
+	cout << endl;
+// AI gen end
+
+	vector<vector<Edge>> adjMatrixRef(V, vector<Edge>(V));
+	for (int i = 0; i < V; i++) {
+		for (int j = 0; j < V; j++) {
+			// cout << "(" << adjMatrixCopy[i][j].u << ", " << adjMatrixCopy[i][j].v << ", " << adjMatrixCopy[i][j].w << ") ";
+			if(adjMatrixCopy[i][j].w != -101) {
+				adjMatrixRef[i][j].u = adjMatrixCopy[i][j].u;
+				adjMatrixRef[i][j].v = adjMatrixCopy[i][j].v;
+				adjMatrixRef[i][j].w = adjMatrixCopy[i][j].w;
+				adjMatrixRef[i][j].inTree = false;
+			} else {
+				adjMatrixRef[i][j].u = -1;
+				adjMatrixRef[i][j].v = -1;
+				adjMatrixRef[i][j].w = -101;
+				adjMatrixRef[i][j].inTree = false;
+			}
+		}
+	}
+
+	#ifdef DEBUG2
+	cout << "\nadjMatrixRef for prim:" << 	endl;
+	printAdjMatrix(adjMatrixRef, V);
+	cout << "After second print" << endl;
+	cout << endl;
+	#endif
+
+
+	vector<Vertex> vertices(V);
+	priority_queue<Vertex*, vector<Vertex*>, compareVertex> maxHeap;
+	vector<Edge> MaxST;
+	initVertices(vertices, maxHeap,  V);
+	
+	#ifdef DEBUG2
+	cout << "\nadjMatrix: " << endl;
+	printAdjMatrix(adjMatrix, V);		//debug
+	cout << endl;
+	#endif
+
+	prim(adjMatrixRef, maxHeap, vertices, MaxST, V);
+
+	#ifdef DEBUG2
+	cout << "\nMaxST: " << endl;
+	printMaxST(MaxST);
+	#endif
+
+	// for(int i = 0; i < MaxST.size(); i++) {
+	// 	for(int j = 0; j < V; j++) {
+	// 		adjMatrixCopy[i][j].inTree = false;
+	// 	}
+	// }
+
+	for(auto& edge : MaxST) {
+		edge.inTree = !edge.inTree;
+	}
+
+	#ifdef DEBUG2
+	cout << "\nMaxST: " << endl;
+	printMaxST(MaxST);
+	#endif 
+
+	for(int i = 0; i < V; i++) {
+		for(int j = 0; j < V; j++) {
+			adjMatrixCopy[i][j].inTree = false;
+		}
+	}
+
+
+	for(int i = 0; i < MaxST.size(); i++) {
+		if(!adjMatrix[MaxST[i].u][MaxST[i].v].inTree) {
+			cout << "here ";
+			adjMatrixCopy[MaxST[i].u][MaxST[i].v].inTree = false;
+			adjMatrixCopy[MaxST[i].v][MaxST[i].u].inTree = true;
+		} else {
+			adjMatrixCopy[MaxST[i].u][MaxST[i].v].inTree = true;
+			adjMatrixCopy[MaxST[i].v][MaxST[i].u].inTree = false;
+		}
+		
+	}
+
+	
+
+
+
+	#ifdef DEBUG2
+	cout << "\nadjMatrixCopy: " << endl;
+	for (int i = 0; i < adjMatrixCopy.size(); ++i) {
+			cout << i << ": ";
+			for (int j = 0; j < adjMatrixCopy[i].size(); ++j) {
+				if (adjMatrixCopy[i][j].w != -101) {
+					cout << "(" << adjMatrixCopy[i][j].u << ", " << adjMatrixCopy[i][j].v << ", " << adjMatrixCopy[i][j].w;
+					#ifdef DEBUG2
+					cout << ", " << ((adjMatrixCopy[i][j].inTree) ? "True" : "False") << ", " << ((adjMatrixCopy[i][j].Copied) ? "True" : "False");
+					#endif
+					cout << ") ";
+				}
+			}
+			cout << endl;
+		}
+	cout << endl;
+	#endif
+
+
+	for(int i = 0; i < V; i++) {
+		for(int j = 0; j < V; j++) {
+			if(adjMatrixCopy[i][j].inTree == true) {
+				if(adjMatrixCopy[i][j].Copied == true) {
+					adjMatrixCopy[i][j] = adjMatrix[i][j].toEdgeCopy();
+				}
+			} else {
+				if(adjMatrixCopy[i][j].Copied == true) {
+					adjMatrixCopy[i][j] = adjMatrix[i][j].toEdgeCopy();
+				}
+			}
+		}
+	}
+
+
+
+	// for(int i = 0; i < V; i++) {
+	// 	for(int j = 0; j < V; j++) {
+	// 		if(adjMatrixRef[i][j].inTree == true) {
+	// 			if(adjMatrixCopy[i][j].inTree == false) {
+	// 				adjMatrixCopy[i][j] = adjMatrix[i][j].toEdgeCopy();
+	// 			}
+	// 		} else {
+	// 			if(adjMatrixCopy[i][j].inTree == true) {
+	// 				adjMatrixCopy[i][j].inTree = false;
+	// 			} else {
+	// 				adjMatrixCopy[i][j] = adjMatrix[i][j].toEdgeCopy();
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	vector<vector<Edge>> result(V, vector<Edge>(V));
+	for (int i = 0; i < V; ++i) {
+		for (int j = 0; j < V; ++j) {
+			result[i][j] = adjMatrixCopy[i][j].toEdge();
+		}
+	}
+
+#ifdef DEBUG2
+cout << "\nResult: " << endl;
+	printAdjMatrix(result, V);
+#endif
+
+	for(int i = 0; i < V; i++) {
+		for(int j = 0; j < V; j++) {
+			if(result[i][j].inTree == false && result[i][j].w < 0) {
+				adjMatrix[i][j].inTree = false;
+			} else if(result[i][j].inTree == false && result[i][j].w > 0) {
+				adjMatrix[i][j].inTree = true;
+			}
+		}
+		
+	}
+	// printMaxST(MaxST);
+	// int maxNegativeWeight = INT_MIN;
+	// int maxNegativeIndex = -1;
+	// bool positiveEdgeFound = false;
+
+	// for (int j = 0; j < V; j++) {
+	// 	maxNegativeWeight = INT_MIN;
+	// 	maxNegativeIndex = -1;
+	// 	positiveEdgeFound = false;
+
+	// 	// First pass to find the largest negative weight and check for positive edges
+	// 	for (int i = 0; i < V; i++) {
+	// 		if (adjMatrix[i][j].w > 0) {
+	// 			positiveEdgeFound = true;
+	// 			break;
+	// 		}
+	// 		if (adjMatrix[i][j].w < 0 && adjMatrix[i][j].w > maxNegativeWeight) {
+	// 			maxNegativeWeight = adjMatrix[i][j].w;
+	// 			maxNegativeIndex = i;
+	// 		}
+	// 	}
+
+	// 	// Second pass to set inTree property
+	// 	for (int i = 0; i < V; i++) {
+	// 		if (positiveEdgeFound) {
+	// 			if (adjMatrix[i][j].w < 0 && adjMatrix[i][j].w != -101) {
+	// 				adjMatrix[i][j].inTree = false;
+	// 			}
+	// 		} else {
+	// 			if (i != maxNegativeIndex && adjMatrix[i][j].w < 0 && adjMatrix[i][j].w != -101) {
+	// 				adjMatrix[i][j].inTree = false;
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+
+		
+	}
+
+
+
+
+
+
+
 void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V) {
 	ostringstream unseleceted;
 	int removedWeight = 0;
@@ -209,10 +515,43 @@ void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& 
 	}
 }
 
-void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V) {
+bool checkColor(vector<Vertex>& vertices, int V) {
+	for (int i = 0; i < V; i++) {
+		if(vertices[i].color == WHITE)	return false;
+	}
+	return true;
+}
+
+
+void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, vector<Vertex>& vertices, int V) {
 	ostringstream unseleceted;
 	int removedWeight = 0;
 	bool edgeRemoved = false;
+
+	for(int k = 0; k < 5; k++){
+		for(int i = 0; i < V; i++) {
+			for(int j = 0; j < V; j++) {
+				if(adjMatrix[i][j].w != -101 && adjMatrix[i][j].inTree && adjMatrix[i][j].w < 0) {
+					adjMatrix[i][j].inTree = false;
+					dfs(adjMatrix, vertices, V);
+					bool connected = checkColor(vertices, V);
+					if(!connected)	adjMatrix[i][j].inTree = true;
+				}
+			}
+		}
+
+
+		for(int i = 0; i < V; i++) {
+			for(int j = 0; j < V; j++) {
+				if(adjMatrix[i][j].w != -101 && !adjMatrix[i][j].inTree && adjMatrix[i][j].w > 0) {
+					adjMatrix[i][j].inTree = true;
+					dfs(adjMatrix, vertices, V);
+					if(cycleFound)	adjMatrix[i][j].inTree = false;
+				}
+			}
+		}
+	}
+	
 	for (int i = 0; i < V; i++) {
 		for (int j = 0; j < V; j++) {
 			if (!adjMatrix[i][j].inTree && i != j && adjMatrix[i][j].w != -101) {
@@ -459,12 +798,20 @@ void breakMinEdge(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int
 void buildDirectedMaxST(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, vector<Edge>& MaxST, int V) {
 	dfs(adjMatrix, vertices, V, MaxST);
 }
+
+
+
+
 /* ------------Debug Functions------------- */
 void printAdjMatrix(const vector<vector<Edge>>& adjMatrix, int V) {
 	for (int i = 0; i < V; ++i) {
 		cout << i << ": ";
 		for (int j = 0; j < V; ++j) {
-			if(adjMatrix[i][j].w != -101) cout << "(" << adjMatrix[i][j].u << ", " << adjMatrix[i][j].v << ", " << adjMatrix[i][j].w << ") ";
+			if(adjMatrix[i][j].w != -101) cout << "(" << adjMatrix[i][j].u << ", " << adjMatrix[i][j].v << ", " << adjMatrix[i][j].w;
+			#ifdef DEBUG2
+			if(adjMatrix[i][j].w != -101) cout << ", " << (adjMatrix[i][j].inTree);
+			#endif
+			if(adjMatrix[i][j].w != -101) cout << ") ";
 		}
 		cout << endl;
 	}
@@ -473,7 +820,11 @@ void printAdjMatrix(const vector<vector<Edge>>& adjMatrix, int V) {
 void printMaxST(vector<Edge>& MaxST) {
 	cout << "MaxST size: " << MaxST.size() << endl;
 	for (const auto& edge : MaxST) {
-		cout << "(" << edge.u << ", " << edge.v << ", " << edge.w << ") " << endl;
+		cout << "(" << edge.u << ", " << edge.v << ", " << edge.w;
+		#ifdef DEBUG2
+		if(edge.w != -101) cout << ", " << (edge.inTree);
+		#endif
+		if(edge.w != -101) cout << ") " << endl;
 	}
 	cout << endl;
 }
