@@ -34,12 +34,9 @@ struct DisjointSet {
 void buildAdjlist(ifstream& input, vector<vector<Edge>>& adjList, int V, int E, bool directed);
 void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, int V);
 void printAdjList(const vector<vector<Edge>>& adjList);		//debug
-// void prim(const vector<vector<Edge>>& adjList, vector<Vertex>& vertices, Vertex& root, vector<Edge>& Max_ST, const int V);
 void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST);
 void printMaxST(vector<Edge>& MaxST);
 int searchParentIndex(const vector<vector<Edge>>& adjList, int u, int parent);
-// int extractMin(vector<int>& heap);
-// bool minHeapify(vector<int>& heap, int index);
 void notInMaxST(vector<vector<Edge>>& adjList, vector<Edge>& MaxST, ofstream& output);
 
 int main (int argc, char* argv []) {
@@ -57,20 +54,23 @@ int main (int argc, char* argv []) {
 	directed = (temp == 'd') ? true : false;
 
 	vector<vector<Edge>> adjList(V);
-	// vector<int> shortestPath(V, INT_MIN);
 	vector<Edge> cycle;
 	priority_queue<Vertex*, vector<Vertex*>, compareVertex> maxHeap;
 	vector<Vertex> vertices(V);
 	vector<Edge> MaxST;
+	
+	// if undirected follow this procedure
 	initVertices(vertices, maxHeap,  V);
 	buildAdjlist(input, adjList, V, E, directed);
 	printAdjList(adjList);		//debug
 	prim(adjList, maxHeap, vertices, MaxST);
-	// prim(adjList, vertices, vertices[0], MaxST, V);
 	printMaxST(MaxST);
 	notInMaxST(adjList, MaxST, output);
 	input.close();
 	output.close();
+
+	// if directed follow this procedure
+	
 
 	return 0;
 
@@ -95,71 +95,15 @@ void buildAdjlist(ifstream& input, vector<vector<Edge>>& adjList, int V, int E, 
 }
 
 
-
-/* int extractMin(vector<int>& heap) {
-// 	if (heap.empty()) {
-// 		cout << "Heap is empty" << endl;
-// 	}
-
-// 	int minElement = heap.front();
-// 	heap.front() = heap.back();
-// 	heap.pop_back();
-
-// 	int index = 0;
-// 	minHeapify(heap, index);
-
-// 	return minElement;
-// }
-
-
-// bool minHeapify(vector<int>& heap, int index) {
-// 	int smallest = index;
-// 	int leftChild = 2 * index + 1;
-// 	int rightChild = 2 * index + 2;
-
-// 	if (leftChild < heap.size() && heap[leftChild] < heap[smallest]) {
-// 		smallest = leftChild;
-// 	}
-
-// 	if (rightChild < heap.size() && heap[rightChild] < heap[smallest]) {
-// 		smallest = rightChild;
-// 	}
-
-// 	if (smallest != index) {
-// 		swap(heap[index], heap[smallest]);
-// 		minHeapify(heap, smallest);
-// 	}
-// 		return true;
-// }
-*/
-
 void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, int V) {	//initialize and enqueue vertices
 	for (int i = 0; i < V; i++) {
 		vertices[i].key = INT_MIN;
 		vertices[i].p = -1;
 		vertices[i].index = i;
 		vertices[i].inTree = false;
-		// maxHeap.push(vertices[i]);
 	}
 	maxHeap.push(&vertices[0]);
 }
-
-
-// void Prim(const vector<vector<Edge>>& adjList, priority_queue<Vertex, vector<Vertex>>& maxHeap, vector<Vertex>& vertices, Vertex& root, vector<Edge>& Max_ST, const int V) {
-// 	root.key = 0;
-// 	root.inTree = true;
-// 	do {
-// 		for (int i = 0; i < adjList[root.index].size(); i++) {
-// 			if(vertices[adjList[root.index][i].v].inTree == false && adjList[root.index][i].w < vertices[adjList[root.index][i].v].key) {
-// 				vertices[adjList[root.index][i].v].p = root.index;
-// 				vertices[adjList[root.index][i].v].key = adjList[root.index][i].w;
-// 			}
-// 		}
-// 		root = maxHeap.top();
-// 		maxHeap.pop();
-// 	} while (!maxHeap.empty());
-
-// }
 
 void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST) {
 	bool first = true;
@@ -168,8 +112,6 @@ void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>
 	int iteration = 0;
 
 	while(!maxHeap.empty()) {
-		iteration++;
-		cout << "Iteration: " << iteration << endl;
 		Vertex* u = maxHeap.top();
 		maxHeap.pop();
 
@@ -191,20 +133,12 @@ void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>
 
 		first = false;
 		(*u).inTree = true;
-		// cout << "u.index: " << u.index << endl;
 		for (int i = 0; i < adjList[(*u).index].size(); i++) {
 			Vertex* v = &vertices[adjList[(*u).index][i].v];
 			if (!(*v).inTree && adjList[(*u).index][i].w > (*v).key) {
 				(*v).p = (*u).index;
 				(*v).key = adjList[(*u).index][i].w;	
 				maxHeap.push(v);
-				// So the situation now is that i couldn't really change the key of the vertex in the maxHeap
-				// So I have to pop it out and push it back in
-				// I have to find a way to change the key of the vertex in the maxHeap
-				// I can't just pop it out and push it back in
-				// But i dont know how to locate the thing in the maxHeap
-				// Why not only enqueue the things when their key got updated instead of enqueuing all the vertices at init
-				// But be ware of some conditions that might occur empty queue in the process, remember to handle that
 			}
 		}
 	}
