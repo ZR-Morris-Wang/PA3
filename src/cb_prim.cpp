@@ -16,8 +16,8 @@ struct Vertex {
 };
 
 struct compareVertex {
-	bool operator() (const Vertex& v1, const Vertex& v2) {
-		return v1.key < v2.key;
+	bool operator() (const Vertex* v1, const Vertex* v2) {
+		return (*v1).key < (*v2).key;
 	}
 };
 
@@ -32,10 +32,10 @@ struct DisjointSet {
 };
 
 void buildAdjlist(ifstream& input, vector<vector<Edge>>& adjList, int V, int E, bool directed);
-void initVertices(vector<Vertex>& vertices, priority_queue<Vertex, vector<Vertex>, compareVertex>& maxHeap, int V);
+void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, int V);
 void printAdjList(const vector<vector<Edge>>& adjList);		//debug
 // void prim(const vector<vector<Edge>>& adjList, vector<Vertex>& vertices, Vertex& root, vector<Edge>& Max_ST, const int V);
-void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex, vector<Vertex>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST);
+void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST);
 void printMaxST(vector<Edge>& MaxST);
 int searchParentIndex(const vector<vector<Edge>>& adjList, int u, int parent);
 // int extractMin(vector<int>& heap);
@@ -59,7 +59,7 @@ int main (int argc, char* argv []) {
 	vector<vector<Edge>> adjList(V);
 	// vector<int> shortestPath(V, INT_MIN);
 	vector<Edge> cycle;
-	priority_queue<Vertex, vector<Vertex>, compareVertex> maxHeap;
+	priority_queue<Vertex*, vector<Vertex*>, compareVertex> maxHeap;
 	vector<Vertex> vertices(V);
 	vector<Edge> MaxST;
 	initVertices(vertices, maxHeap,  V);
@@ -133,7 +133,7 @@ void buildAdjlist(ifstream& input, vector<vector<Edge>>& adjList, int V, int E, 
 // }
 */
 
-void initVertices(vector<Vertex>& vertices, priority_queue<Vertex, vector<Vertex>, compareVertex>& maxHeap, int V) {	//initialize and enqueue vertices
+void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, int V) {	//initialize and enqueue vertices
 	for (int i = 0; i < V; i++) {
 		vertices[i].key = INT_MIN;
 		vertices[i].p = -1;
@@ -141,7 +141,7 @@ void initVertices(vector<Vertex>& vertices, priority_queue<Vertex, vector<Vertex
 		vertices[i].inTree = false;
 		// maxHeap.push(vertices[i]);
 	}
-	maxHeap.push(vertices[0]);
+	maxHeap.push(&vertices[0]);
 }
 
 
@@ -161,7 +161,7 @@ void initVertices(vector<Vertex>& vertices, priority_queue<Vertex, vector<Vertex
 
 // }
 
-void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex, vector<Vertex>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST) {
+void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST) {
 	bool first = true;
 	int tempIndex = 0;
 	int tempParent = 0;
@@ -170,34 +170,34 @@ void prim(vector<vector<Edge>>& adjList, priority_queue<Vertex, vector<Vertex>, 
 	while(!maxHeap.empty()) {
 		iteration++;
 		cout << "Iteration: " << iteration << endl;
-		Vertex u = maxHeap.top();
+		Vertex* u = maxHeap.top();
 		maxHeap.pop();
 
-		if(first)	u.key = 0;
+		if(first)	(*u).key = 0;
 		else {	// not first -> must have a parent
-			int index = searchParentIndex(adjList, u.index, u.p);
-			if(!adjList[u.index][index].inTree)	MaxST.push_back(adjList[u.index][index]);
+			int index = searchParentIndex(adjList, (*u).index, (*u).p);
+			if(!adjList[(*u).index][index].inTree)	MaxST.push_back(adjList[(*u).index][index]);
 			
-			adjList[u.index][index].inTree = true;
-			vertices[adjList[u.index][index].v].inTree = true;
+			adjList[(*u).index][index].inTree = true;
+			vertices[adjList[(*u).index][index].v].inTree = true;
 			// Search for adjList[u.index][u.p]'s counterpart
-			for (int j = 0; j < adjList[u.p].size(); j++) {
-				if (adjList[u.p][j].v == u.index) {
-					adjList[u.p][j].inTree = true;
+			for (int j = 0; j < adjList[(*u).p].size(); j++) {
+				if (adjList[(*u).p][j].v == (*u).index) {
+					adjList[(*u).p][j].inTree = true;
 					break;
 				}
 			}
 		}
 
 		first = false;
-		u.inTree = true;
+		(*u).inTree = true;
 		// cout << "u.index: " << u.index << endl;
-		for (int i = 0; i < adjList[u.index].size(); i++) {
-			Vertex* v = &vertices[adjList[u.index][i].v];
-			if (!(*v).inTree && adjList[u.index][i].w > (*v).key) {
-				(*v).p = u.index;
-				(*v).key = adjList[u.index][i].w;	
-				maxHeap.push(*v);
+		for (int i = 0; i < adjList[(*u).index].size(); i++) {
+			Vertex* v = &vertices[adjList[(*u).index][i].v];
+			if (!(*v).inTree && adjList[(*u).index][i].w > (*v).key) {
+				(*v).p = (*u).index;
+				(*v).key = adjList[(*u).index][i].w;	
+				maxHeap.push(v);
 				// So the situation now is that i couldn't really change the key of the vertex in the maxHeap
 				// So I have to pop it out and push it back in
 				// I have to find a way to change the key of the vertex in the maxHeap
