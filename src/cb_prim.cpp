@@ -341,7 +341,7 @@ void dfsVisit(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int u, ve
 				return;
 			}
 		} else {		// The cycles should have all been broken
-			cout << "\nPair skipped\n" << endl;
+			// cout << "\nPair skipped\n" << endl;
 			continue;
 		}
 
@@ -409,7 +409,7 @@ void dfs(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int V, vector<
 			dfsVisit(adjList, vertices, i);
 		}
 	}
-	cout << "Last traversal done" << endl;
+	// cout << "Last traversal done" << endl;
 }
 
 void breakMinEdge(vector<vector<Edge>>& adjList, vector<Vertex>& vertices, int cycleHead, int cycleTail) {

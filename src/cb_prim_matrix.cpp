@@ -1,5 +1,5 @@
 #define INT_MIN -2147483648
-#define DEBUG
+// #define DEBUG
 
 #include <iostream>
 #include <fstream>
@@ -39,20 +39,20 @@ struct DisjointSet {
 
 void buildAdjMatrix(ifstream& input, vector<vector<Edge>>& adjMatrix, int V, int E, bool directed);
 void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, int V);
-void printAdjMatrix(const vector<vector<Edge>>& adjMatrix);		//debug
-void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST);
+void printAdjMatrix(const vector<vector<Edge>>& adjMatrix, int V);		//debug
+void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST, int V);
 void printMaxST(vector<Edge>& MaxST);
 // int searchParentIndex(const vector<vector<Edge>>& adjMatrix, int u, int parent);
 void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V);
-void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output);
+void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V);
 void breakMinEdge(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int cycleHead, int cycleTail);
 void dfsInit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V);
-void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u);
-void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, vector<Edge>& MaxST);
+void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, int V);
+void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, vector<Edge>& MaxST, int V);
 void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V);
 void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V, vector<Edge>& MaxST);
 void buildDirectedMaxST(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, vector<Edge>& MaxST, int V);
-void allPathSetTrue(vector<vector<Edge>>& adjMatrix);
+void allPathSetTrue(vector<vector<Edge>>& adjMatrix, int V);
 
 
 int main (int argc, char* argv []) {
@@ -67,6 +67,7 @@ int main (int argc, char* argv []) {
     output.open(argv[2]);
 
 	input >> temp >> V >> E;
+	
 	directed = (temp == 'd') ? true : false;
 
 	vector<vector<Edge>> adjMatrix(V, vector<Edge>(V, {-1, -1, -101, false}));
@@ -79,14 +80,14 @@ int main (int argc, char* argv []) {
 	if(!directed) {
 		initVertices(vertices, maxHeap,  V);
 		buildAdjMatrix(input, adjMatrix, V, E, directed);
-		// printAdjMatrix(adjMatrix);		//debug
-		prim(adjMatrix, maxHeap, vertices, MaxST);
+		// printAdjMatrix(adjMatrix, V);		//debug
+		prim(adjMatrix, maxHeap, vertices, MaxST, V);
 		// printMaxST(MaxST);
 		notInMaxST(adjMatrix, MaxST, output, V);
 	} else {
 		
 		buildAdjMatrix(input, adjMatrix, V, E, directed);
-		allPathSetTrue(adjMatrix);
+		allPathSetTrue(adjMatrix, V);
 		int iteration = 0;
 
 		while(cycleFound) {
@@ -104,7 +105,7 @@ int main (int argc, char* argv []) {
 		}
 
 		buildDirectedMaxST(adjMatrix, vertices, MaxST, V);
-		notInMaxSTDirected(adjMatrix, MaxST, output);
+		notInMaxSTDirected(adjMatrix, MaxST, output, V);
 	}
 
 	input.close();
@@ -133,7 +134,10 @@ void buildAdjMatrix(ifstream& input, vector<vector<Edge>>& adjMatrix, int V, int
 			adjMatrix[v][u] = {v, u, w, false};
 		}
 	}
+
+	#ifdef DEBUG
 	cout << "Adjacency Matrix built" << endl;
+	#endif
 }
 
 
@@ -148,11 +152,8 @@ void initVertices(vector<Vertex>& vertices, priority_queue<Vertex*, vector<Verte
 	maxHeap.push(&vertices[0]);
 }
 
-void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST) {
+void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex*>, compareVertex>& maxHeap, vector<Vertex>& vertices, vector<Edge>& MaxST, int V) {
 	bool first = true;
-	int tempIndex = 0;
-	int tempParent = 0;
-	int iteration = 0;
 
 	while(!maxHeap.empty()) {
 		Vertex* u = maxHeap.top();
@@ -170,7 +171,7 @@ void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex
 
 		first = false;
 		(*u).inTree = true;
-		for (int i = 0; i < adjMatrix[(*u).index].size(); i++) {
+		for (int i = 0; i < V; i++) {
 			Vertex* v = &vertices[adjMatrix[(*u).index][i].v];
 			if (!(*v).inTree && adjMatrix[(*u).index][i].w > (*v).key) {
 				(*v).p = (*u).index;
@@ -182,14 +183,6 @@ void prim(vector<vector<Edge>>& adjMatrix, priority_queue<Vertex*, vector<Vertex
 
 }
 
-// int searchParentIndex(const vector<vector<Edge>>& adjMatrix, int u, int parent) {
-// 	for (int i = 0; i < adjMatrix[u].size(); i++) {
-// 		if (adjMatrix[u][i].v == parent) {
-// 			// cout << "Parent index: " << i << endl;
-// 			return i;
-// 		}
-// 	}
-// }
 
 void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V) {
 	ostringstream unseleceted;
@@ -212,21 +205,21 @@ void notInMaxST(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& 
 	} else {
 		output << removedWeight << endl;
 		output << unseleceted.str() << endl;
-		cout << removedWeight << endl;
+		// cout << removedWeight << endl;
 	}
 }
 
-void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output) {
+void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, ofstream& output, int V) {
 	ostringstream unseleceted;
 	int removedWeight = 0;
 	bool edgeRemoved = false;
-	for (int i = 0; i < adjMatrix.size(); i++) {
-		for (int j = 0; j < adjMatrix[i].size(); j++) {
-			if (!adjMatrix[i][j].inTree) {
+	for (int i = 0; i < V; i++) {
+		for (int j = 0; j < V; j++) {
+			if (!adjMatrix[i][j].inTree && i != j && adjMatrix[i][j].w != -101) {
 				adjMatrix[i][j].inTree = true;	// Use .inTree to mark the edge already checked
 				// adjMatrix[adjMatrix[i][j].v][searchParentIndex(adjMatrix, adjMatrix[i][j].v, i)].inTree = true;	// Use .inTree to avoid duplicate edges
 				edgeRemoved = true;
-				unseleceted << adjMatrix[i][j].u << " " << adjMatrix[i][j].v << " " << adjMatrix[i][j].w << endl;
+				unseleceted << i << " " << j << " " << adjMatrix[i][j].w << endl;
 				removedWeight += adjMatrix[i][j].w;
 			}
 		}
@@ -241,10 +234,10 @@ void notInMaxSTDirected(vector<vector<Edge>>& adjMatrix, vector<Edge>& MaxST, of
 
 }
 
-void allPathSetTrue(vector<vector<Edge>>& adjMatrix) {
-	for (int i = 0; i < adjMatrix.size(); i++) {
-		for (int j = 0; j < adjMatrix[i].size(); j++) {
-			adjMatrix[i][j].inTree = true;
+void allPathSetTrue(vector<vector<Edge>>& adjMatrix, int V) {
+	for (int i = 0; i < V; i++) {
+		for (int j = 0; j < V; j++) {
+			if(adjMatrix[i][j].w != -101) adjMatrix[i][j].inTree = true;
 		}
 	}
 }
@@ -259,10 +252,10 @@ void dfsInit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V) {
 	}
 }
 
-void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u) {
+void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, int V) {
 	cycleFound = false;
 	vertices[u].color = GRAY;
-	for (int i = 0; i < adjMatrix[u].size(); i++) {
+	for (int i = 0; i < V; i++) {
 		
 		#ifdef DEBUG
 		cout << "u = " << u << endl;
@@ -273,23 +266,23 @@ void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u) 
 		cout << endl;
 		#endif
 
-		if (vertices[adjMatrix[u][i].v].color == WHITE && adjMatrix[u][i].inTree) {
+		if (vertices[i].color == WHITE && adjMatrix[u][i].inTree) {
 			cycleFound = false;
-			vertices[adjMatrix[u][i].v].p = u;
+			vertices[i].p = u;
 			adjMatrix[u][i].inTree = true;
-			if(!cycleFound && vertices[adjMatrix[u][i].v].color != BLACK) {
+			if(!cycleFound && vertices[i].color != BLACK) {
 				
 				#ifdef DEBUG
 				cout << "Row 271: " << endl;
 				#endif
 
-				dfsVisit(adjMatrix, vertices, adjMatrix[u][i].v);
+				dfsVisit(adjMatrix, vertices, i, V);
 			} else {
 				return;
 			}
-		} else if (vertices[adjMatrix[u][i].v].color == GRAY && adjMatrix[u][i].inTree) {
+		} else if (vertices[i].color == GRAY && adjMatrix[u][i].inTree) {
 			adjMatrix[u][i].inTree = true;
-			vertices[adjMatrix[u][i].v].p = u;
+			vertices[i].p = u;
 			
 			#ifdef DEBUG
 			cout << "vertices[adjMatrix[u][i].v].p: " << vertices[adjMatrix[u][i].v].p << endl;
@@ -298,7 +291,7 @@ void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u) 
 			#endif
 
 			cycleFound = true;
-			breakMinEdge(adjMatrix, vertices, adjMatrix[u][i].v, u);		// breakMinEdge (adjMatrix, cycle head, cycle tail)
+			breakMinEdge(adjMatrix, vertices, i, u);		// breakMinEdge (adjMatrix, cycle head, cycle tail)
 			return;
 		} else {
 			
@@ -325,21 +318,21 @@ void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u) 
 	return;
 }
 
-void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, vector<Edge>& MaxST) {
+void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, vector<Edge>& MaxST, int V) {
 	vertices[u].color = GRAY;
-	for (int i = 0; i < adjMatrix[u].size(); i++) {
-		if (vertices[adjMatrix[u][i].v].color == WHITE && adjMatrix[u][i].inTree) {
+	for (int i = 0; i < V; i++) {
+		if (vertices[i].color == WHITE && adjMatrix[u][i].inTree) {
 			cycleFound = false;
-			vertices[adjMatrix[u][i].v].p = u;
+			vertices[i].p = u;
 			adjMatrix[u][i].inTree = true;
 			MaxST.push_back(adjMatrix[u][i]);
-			if(!cycleFound && vertices[adjMatrix[u][i].v].color != BLACK) {
-				dfsVisit(adjMatrix, vertices, adjMatrix[u][i].v);
+			if(!cycleFound && vertices[i].color != BLACK) {
+				dfsVisit(adjMatrix, vertices, i, V);
 			} else {
 				return;
 			}
 		} else {		// The cycles should have all been broken
-			cout << "\nPair skipped\n" << endl;
+			// cout << "\nPair skipped\n" << endl;
 			continue;
 		}
 
@@ -354,15 +347,14 @@ void dfsVisit(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int u, 
 
 void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V) {
 	dfsInit(adjMatrix, vertices, V);
-	srand(time(NULL));
+	srand(time(0));
 	int root = rand() % V;
-	
 	#ifdef DEBUG
 	cout << "Root: " << root << endl;
 	cout << "Row 330: " << endl;
 	#endif
 
-	if(vertices[root].color != BLACK)	dfsVisit(adjMatrix, vertices, root/*, time*/);
+	if(vertices[root].color != BLACK)	dfsVisit(adjMatrix, vertices, root, V);
 	if(cycleFound) {
 		return;
 	} else {
@@ -374,7 +366,7 @@ void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V) {
 				cout << "Row 337: " << endl;
 				#endif
 
-				dfsVisit(adjMatrix, vertices, i);
+				dfsVisit(adjMatrix, vertices, i, V);
 				
 				#ifdef DEBUG
 				cout << "Cycle Found @ Row 337: " << cycleFound << endl;
@@ -404,10 +396,10 @@ void dfs(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int V, vecto
 	for (int i = 0; i < V; i++) {
 		if (vertices[i].color == WHITE) {
 			MaxST.push_back(adjMatrix[i][vertices[i].p]);
-			dfsVisit(adjMatrix, vertices, i);
+			dfsVisit(adjMatrix, vertices, i, V);
 		}
 	}
-	cout << "Last traversal done" << endl;
+	// cout << "Last traversal done" << endl;
 }
 
 void breakMinEdge(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int cycleHead, int cycleTail) {
@@ -443,8 +435,8 @@ void breakMinEdge(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertices, int
 
 		int temp;
 		temp = u;
-		u = vertices[adjMatrix[u][v].u].p;
-		// v = searchParentIndex(adjMatrix, u, temp);
+		u = vertices[u].p;
+		v = temp;
 		if(adjMatrix[u][v].w < minWeight) {
 			minWeight = adjMatrix[u][v].w;
 			minEdge = adjMatrix[u][v];
@@ -468,11 +460,11 @@ void buildDirectedMaxST(vector<vector<Edge>>& adjMatrix, vector<Vertex>& vertice
 	dfs(adjMatrix, vertices, V, MaxST);
 }
 /* ------------Debug Functions------------- */
-void printAdjMatrix(const vector<vector<Edge>>& adjMatrix) {
-	for (int i = 0; i < adjMatrix.size(); ++i) {
+void printAdjMatrix(const vector<vector<Edge>>& adjMatrix, int V) {
+	for (int i = 0; i < V; ++i) {
 		cout << i << ": ";
-		for (const auto& edge : adjMatrix[i]) {
-			cout << "(" << edge.u << ", " << edge.v << ", " << edge.w << ") ";
+		for (int j = 0; j < V; ++j) {
+			if(adjMatrix[i][j].w != -101) cout << "(" << adjMatrix[i][j].u << ", " << adjMatrix[i][j].v << ", " << adjMatrix[i][j].w << ") ";
 		}
 		cout << endl;
 	}
